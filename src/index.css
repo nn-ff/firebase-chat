@@ -26,7 +26,7 @@
 }
 
 .chat-window {
-  width: 300px;
+  max-width: 450px;
   display: flex;
   flex-direction: column;
 }

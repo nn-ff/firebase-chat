@@ -1,9 +1,10 @@
-import { Button, Input } from 'antd'
+import { Avatar, Button, Input } from 'antd'
 import { getAuth, signOut } from 'firebase/auth'
 import React, { FC, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAppDispatch } from '../../hooks/useAppDispatch'
 import { removeUser } from '../../store/slices/userSlice'
+import { UserOutlined } from '@ant-design/icons'
 import { useAuthState } from 'react-firebase-hooks/auth'
 import { useCollectionData } from 'react-firebase-hooks/firestore'
 import { addDoc, collection, orderBy, query, serverTimestamp } from 'firebase/firestore'
@@ -67,15 +68,7 @@ export const Chat: FC = () => {
           const messageTime = dayjs(obj?.timestamp?.toDate() || new Date()).format('hh:mm')
           return (
             <div key={obj.timestamp} className='chat-window__msg'>
-              <img
-                style={{ height: 35, width: 35 }}
-                src={
-                  obj.photoURL
-                    ? obj.photoURL
-                    : 'https://cdn-icons-png.flaticon.com/512/25/25333.png'
-                }
-                alt=''
-              />
+              <Avatar size={30} src={obj.photoURL} icon={<UserOutlined />} />
               <div>
                 {obj.displayName}
                 <span style={{ color: 'gray' }}>{messageTime}</span>: {obj.text}
