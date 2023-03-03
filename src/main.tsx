@@ -8,6 +8,8 @@ import './index.css'
 import './firebase'
 import { persistStore } from 'redux-persist'
 import { PersistGate } from 'redux-persist/integration/react'
+import { ErrorBoundary } from 'react-error-boundary'
+import Asd from './components/Asd'
 
 const store = setupStore()
 const persistor = persistStore(store)
@@ -17,7 +19,9 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
     <PersistGate persistor={persistor}>
       <Provider store={store}>
         <BrowserRouter>
-          <App />
+          <ErrorBoundary FallbackComponent={Asd}>
+            <App />
+          </ErrorBoundary>
         </BrowserRouter>
       </Provider>
     </PersistGate>

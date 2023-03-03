@@ -8,6 +8,7 @@ import { useAuthState } from 'react-firebase-hooks/auth'
 import { useCollectionData } from 'react-firebase-hooks/firestore'
 import { addDoc, collection, orderBy, query, serverTimestamp } from 'firebase/firestore'
 import { db } from '../../firebase'
+import * as dayjs from 'dayjs'
 
 export const Chat: FC = () => {
   const [value, setValue] = useState<string>('')
@@ -29,22 +30,11 @@ export const Chat: FC = () => {
     navigate('/')
   }
 
-  const sendMessage = async () => {
-    try {
-      setValue('')
-      const docRef = await addDoc(collection(db, 'messages'), {
-        text: value,
-        uid: user?.uid,
-        photoURL: user?.photoURL,
-        displayName: user?.displayName,
-        timestamp: serverTimestamp(),
-      })
-    } catch (e) {
-      console.error('Error adding document: ', e)
-    }
-  }
-  const onSubmitHandlerMessage = async (e: React.FormEvent<HTMLFormElement>) => {
+  const onSubmitMessage = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    if (value.trim().length === 0) {
+      return
+    }
     try {
       setValue('')
       const docRef = await addDoc(collection(db, 'messages'), {
@@ -60,6 +50,10 @@ export const Chat: FC = () => {
   }
 
   useEffect(() => {
+    chatRef?.current?.scrollIntoView()
+  }, [])
+
+  useEffect(() => {
     chatRef?.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
   return (
@@ -70,6 +64,8 @@ export const Chat: FC = () => {
       <div className='chat-window__wrapper'>
         <div style={{ marginTop: 'auto' }}></div>
         {messages?.map((obj) => {
+          const messageTime = dayjs(obj?.timestamp?.toDate() || new Date()).format('hh:mm')
+
           return (
             <div key={obj.timestamp} className='chat-window__msg'>
               <img
@@ -82,7 +78,8 @@ export const Chat: FC = () => {
                 alt=''
               />
               <div>
-                {obj.displayName}: {obj.text}
+                {obj.displayName}
+                <span style={{ color: 'gray' }}>{messageTime}</span>: {obj.text}
               </div>
             </div>
           )
@@ -90,9 +87,9 @@ export const Chat: FC = () => {
         <div ref={chatRef}></div>
       </div>
       <div className='chat-window__submit'>
-        <form onSubmit={onSubmitHandlerMessage}>
+        <form style={{ display: 'flex' }} onSubmit={onSubmitMessage}>
           <Input onChange={onChangeHandler} type='text' value={value} />
-          <Button onClick={sendMessage}>send</Button>
+          <Button htmlType='submit'>send</Button>
         </form>
       </div>
     </div>
