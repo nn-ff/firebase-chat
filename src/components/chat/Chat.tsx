@@ -8,7 +8,7 @@ import { useAuthState } from 'react-firebase-hooks/auth'
 import { useCollectionData } from 'react-firebase-hooks/firestore'
 import { addDoc, collection, orderBy, query, serverTimestamp } from 'firebase/firestore'
 import { db } from '../../firebase'
-import * as dayjs from 'dayjs'
+import dayjs from 'dayjs'
 
 export const Chat: FC = () => {
   const [value, setValue] = useState<string>('')
@@ -65,7 +65,6 @@ export const Chat: FC = () => {
         <div style={{ marginTop: 'auto' }}></div>
         {messages?.map((obj) => {
           const messageTime = dayjs(obj?.timestamp?.toDate() || new Date()).format('hh:mm')
-
           return (
             <div key={obj.timestamp} className='chat-window__msg'>
               <img
