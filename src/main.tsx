@@ -10,17 +10,28 @@ import { persistStore } from 'redux-persist'
 import { PersistGate } from 'redux-persist/integration/react'
 import { ErrorBoundary } from 'react-error-boundary'
 import Asd from './components/Asd'
+import { ConfigProvider } from 'antd'
 
 const store = setupStore()
 const persistor = persistStore(store)
-
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
     <PersistGate persistor={persistor}>
       <Provider store={store}>
         <BrowserRouter>
           <ErrorBoundary FallbackComponent={Asd}>
-            <App />
+            <ConfigProvider
+              theme={{
+                token: {
+                  colorPrimary: '#595959',
+                  colorBgBase: '#383a40',
+                  colorTextBase: 'white',
+                  lineWidth: 1,
+                },
+              }}
+            >
+              <App />
+            </ConfigProvider>
           </ErrorBoundary>
         </BrowserRouter>
       </Provider>
