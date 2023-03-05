@@ -1,4 +1,4 @@
-import { Avatar, Button, Input } from 'antd'
+import { Avatar, Button } from 'antd'
 import { getAuth, signOut } from 'firebase/auth'
 import React, { FC, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -6,12 +6,11 @@ import { useAppDispatch } from '../../hooks/useAppDispatch'
 import { removeUser } from '../../store/slices/userSlice'
 import { UserOutlined } from '@ant-design/icons'
 import { useAuthState } from 'react-firebase-hooks/auth'
-import { useCollectionData } from 'react-firebase-hooks/firestore'
 import {
   addDoc,
   collection,
   DocumentData,
-  getDocs,
+  onSnapshot,
   orderBy,
   query,
   serverTimestamp,
@@ -56,7 +55,7 @@ export const Chat: FC = () => {
     }
     try {
       setValue('')
-      const docRef = await addDoc(collection(db, 'messages'), {
+      await addDoc(collection(db, 'messages'), {
         text: value,
         uid: user?.uid,
         photoURL: user?.photoURL,
@@ -69,18 +68,16 @@ export const Chat: FC = () => {
   }
 
   useEffect(() => {
-    const fas = async () => {
-      const querySnapshot = await getDocs(
-        query(collection(db, 'messages'), orderBy('timestamp', 'asc')),
-      )
+    const q = query(collection(db, 'messages'), orderBy('timestamp', 'asc'))
+    const unsub = onSnapshot(q, (querySnapshot) => {
       const dataitem: DocumentData[] = []
       querySnapshot.forEach((doc) => {
         dataitem.push(doc.data())
       })
       setItems(dataitem)
-    }
-    fas()
+    })
     chatRef?.current?.scrollIntoView()
+    return () => unsub()
   }, [])
   return (
     <div className='chat-window'>
@@ -91,7 +88,6 @@ export const Chat: FC = () => {
         <div style={{ marginTop: 'auto' }}></div>
         {items?.map((obj, index) => {
           const messageTime = dayjs(obj?.timestamp?.toDate() || new Date()).format('hh:mm')
-          console.log(dayjs(new Date()).format('hh:mm'))
           const indexconverter = items[index - 1]?.uid ? items[index - 1].uid : 'false'
           return (
             <div key={obj.timestamp} style={{ display: 'flex' }} className='chat-window__msg'>
