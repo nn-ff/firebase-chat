@@ -26,7 +26,7 @@ ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
                   colorPrimary: '#595959',
                   colorBgBase: '#383a40',
                   colorTextBase: 'white',
-                  lineWidth: 1,
+                  lineWidth: 0,
                 },
               }}
             >
