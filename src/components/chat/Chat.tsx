@@ -1,11 +1,12 @@
 import { Avatar, Button } from 'antd'
 import { getAuth, signOut } from 'firebase/auth'
-import React, { FC, useEffect, useRef, useState } from 'react'
+import React, { FC, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAppDispatch } from '../../hooks/useAppDispatch'
 import { removeUser } from '../../store/slices/userSlice'
 import { UserOutlined } from '@ant-design/icons'
 import { useAuthState } from 'react-firebase-hooks/auth'
+import _, { divide } from 'lodash'
 import {
   addDoc,
   collection,
@@ -23,6 +24,7 @@ import {
 import { db } from '../../firebase'
 import dayjs from 'dayjs'
 import TextArea from 'antd/es/input/TextArea'
+import { useInView } from 'react-intersection-observer'
 
 export const Chat: FC = () => {
   const [value, setValue] = useState<string>('')
@@ -33,6 +35,10 @@ export const Chat: FC = () => {
   const dispatch = useAppDispatch()
   const chatRef = useRef<HTMLDivElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const { ref, inView, entry } = useInView({
+    threshold: 0.5,
+  })
   const onChangeHandler = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setValue(e.target.value)
   }
@@ -72,13 +78,12 @@ export const Chat: FC = () => {
     chatRef?.current?.scrollIntoView()
   }
   const [latest, setLatest] = useState<QueryDocumentSnapshot<DocumentData>>()
-
   const onClickLoadMore = async () => {
     const q = query(
       collection(db, 'messages'),
       orderBy('timestamp', 'desc'),
       startAfter(latest),
-      limit(25),
+      limit(20),
     )
     const NewItems = await getDocs(q)
     const dataitem: DocumentData[] = []
@@ -86,43 +91,60 @@ export const Chat: FC = () => {
       NewItems.forEach((doc) => {
         dataitem.push(doc.data())
       })
-      setItems([...dataitem.reverse(), ...items])
+      setItems(_.unionBy([...dataitem].reverse(), [...items], 'timestamp.seconds'))
+
       setLatest(NewItems.docs[NewItems.docs.length - 1])
-      console.log(NewItems.docs)
     } else {
       alert('нет данных')
     }
   }
-
   useEffect(() => {
-    const q = query(collection(db, 'messages'), orderBy('timestamp', 'desc'), limit(25))
+    if (inView && latest) {
+      onClickLoadMore()
+    }
+  }, [inView])
+  useEffect(() => {
+    const q = query(collection(db, 'messages'), orderBy('timestamp', 'desc'), limit(5))
     const unsub = onSnapshot(q, (querySnapshot) => {
-      setLatest(querySnapshot.docs[querySnapshot.docs.length - 1])
-      const dataitem: DocumentData[] = []
-      querySnapshot.forEach((doc) => {
-        dataitem.push(doc.data())
-      })
-      setItems(dataitem.reverse())
+      if (!querySnapshot.metadata.hasPendingWrites) {
+        const dataitem: DocumentData[] = []
+        querySnapshot.forEach((doc) => {
+          dataitem.push(doc.data())
+        })
+        setLatest(querySnapshot.docs[querySnapshot.docs.length - 1])
+        setItems((prevState) => {
+          return _.unionBy([...prevState], [...dataitem].reverse(), 'timestamp.seconds')
+        })
+      } else {
+        setLatest(querySnapshot.docs[querySnapshot.docs.length - 1])
+      }
     })
     return () => unsub()
   }, [])
-
-  useEffect(() => {
-    chatRef?.current?.scrollIntoView()
-  }, [])
+  useLayoutEffect(() => {
+    if (inView) {
+      scrollRef?.current?.scrollIntoView()
+    } else {
+      chatRef?.current?.scrollIntoView()
+    }
+  }, [items])
   return (
     <div className='chat-window'>
       <Button onClick={onClickLogout} style={{ position: 'absolute', right: 0 }}>
         выйти
       </Button>
+
       <div className='chat-window__wrapper'>
         <div style={{ marginTop: 'auto' }}></div>
-        <Button onClick={onClickLoadMore}>Load more</Button>
+        <Button ref={ref} onClick={onClickLoadMore}>
+          Load more
+        </Button>
         {items?.map((obj, index) => {
           const messageTime = dayjs(obj?.timestamp?.toDate() || new Date()).format('HH:mm')
           const indexconverter = items[index - 1]?.uid ? items[index - 1].uid : 'false'
           return (
             <div key={obj.timestamp} style={{ display: 'flex' }} className='chat-window__msg'>
+              {index === 20 ? <div ref={scrollRef}></div> : null}
               {indexconverter === items[index].uid ? null : (
                 <div className='chat-msg__info'>
                   <Avatar
