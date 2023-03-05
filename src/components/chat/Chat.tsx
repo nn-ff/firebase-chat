@@ -10,6 +10,8 @@ import {
   addDoc,
   collection,
   DocumentData,
+  limit,
+  limitToLast,
   onSnapshot,
   orderBy,
   query,
@@ -68,7 +70,7 @@ export const Chat: FC = () => {
   }
 
   useEffect(() => {
-    const q = query(collection(db, 'messages'), orderBy('timestamp', 'asc'))
+    const q = query(collection(db, 'messages'), orderBy('timestamp', 'asc'), limitToLast(25))
     const unsub = onSnapshot(q, (querySnapshot) => {
       const dataitem: DocumentData[] = []
       querySnapshot.forEach((doc) => {
@@ -76,9 +78,11 @@ export const Chat: FC = () => {
       })
       setItems(dataitem)
     })
-    chatRef?.current?.scrollIntoView()
     return () => unsub()
   }, [])
+  useEffect(() => {
+    chatRef?.current?.scrollIntoView()
+  }, [items])
   return (
     <div className='chat-window'>
       <Button onClick={onClickLogout} style={{ position: 'absolute', right: 0 }}>
