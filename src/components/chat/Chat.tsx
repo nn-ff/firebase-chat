@@ -7,7 +7,15 @@ import { removeUser } from '../../store/slices/userSlice'
 import { UserOutlined } from '@ant-design/icons'
 import { useAuthState } from 'react-firebase-hooks/auth'
 import { useCollectionData } from 'react-firebase-hooks/firestore'
-import { addDoc, collection, orderBy, query, serverTimestamp } from 'firebase/firestore'
+import {
+  addDoc,
+  collection,
+  DocumentData,
+  getDocs,
+  orderBy,
+  query,
+  serverTimestamp,
+} from 'firebase/firestore'
 import { db } from '../../firebase'
 import dayjs from 'dayjs'
 import TextArea from 'antd/es/input/TextArea'
@@ -15,14 +23,13 @@ import TextArea from 'antd/es/input/TextArea'
 export const Chat: FC = () => {
   const [value, setValue] = useState<string>('')
   const auth = getAuth()
-  const [messages, loading, error] = useCollectionData(
-    query(collection(db, 'messages'), orderBy('timestamp', 'asc')),
-  )
+  const [items, setItems] = useState<DocumentData[]>([])
   const [user] = useAuthState(auth)
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const chatRef = useRef<HTMLDivElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
+
   const onChangeHandler = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setValue(e.target.value)
   }
@@ -62,8 +69,19 @@ export const Chat: FC = () => {
   }
 
   useEffect(() => {
+    const fas = async () => {
+      const querySnapshot = await getDocs(
+        query(collection(db, 'messages'), orderBy('timestamp', 'asc')),
+      )
+      const dataitem: DocumentData[] = []
+      querySnapshot.forEach((doc) => {
+        dataitem.push(doc.data())
+      })
+      setItems(dataitem)
+    }
+    fas()
     chatRef?.current?.scrollIntoView()
-  }, [messages])
+  }, [])
   return (
     <div className='chat-window'>
       <Button onClick={onClickLogout} style={{ position: 'absolute', right: 0 }}>
@@ -71,13 +89,13 @@ export const Chat: FC = () => {
       </Button>
       <div className='chat-window__wrapper'>
         <div style={{ marginTop: 'auto' }}></div>
-        {messages?.map((obj, index) => {
+        {items?.map((obj, index) => {
           const messageTime = dayjs(obj?.timestamp?.toDate() || new Date()).format('hh:mm')
           console.log(dayjs(new Date()).format('hh:mm'))
-          const indexconverter = messages[index - 1]?.uid ? messages[index - 1].uid : 'false'
+          const indexconverter = items[index - 1]?.uid ? items[index - 1].uid : 'false'
           return (
             <div key={obj.timestamp} style={{ display: 'flex' }} className='chat-window__msg'>
-              {indexconverter === messages[index].uid ? null : (
+              {indexconverter === items[index].uid ? null : (
                 <div className='chat-msg__info'>
                   <Avatar
                     style={{ marginTop: 5 }}
@@ -85,13 +103,13 @@ export const Chat: FC = () => {
                     src={obj.photoURL}
                     icon={<UserOutlined />}
                   />
-                  <div style={{ whiteSpace: 'pre-line' }}>
-                    <div style={{ padding: 2 }}>{obj.displayName}</div>
-                    <span style={{ color: 'gray', padding: 2 }}>{messageTime}</span>
+                  <div>
+                    <div style={{ padding: 2, marginLeft: 10 }}>{obj.displayName}</div>
+                    <span style={{ color: 'gray', padding: 2, marginLeft: 10 }}>{messageTime}</span>
                   </div>
                 </div>
               )}
-              <div style={{ marginTop: 5 }}>{obj.text}</div>
+              <div style={{ marginTop: 5, whiteSpace: 'pre-line' }}>{obj.text}</div>
             </div>
           )
         })}
