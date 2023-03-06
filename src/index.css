@@ -80,7 +80,7 @@
 }
 
 aside.EmojiPickerReact.epr-main {
-  position: absolute;
+  position: absolute !important;
   top:-400px;
   right: 25px;
 }
