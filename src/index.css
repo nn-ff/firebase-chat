@@ -78,3 +78,9 @@
   margin-top: 15px;
   display: flex;
 }
+
+aside.EmojiPickerReact.epr-main {
+  position: absolute;
+  top:-400px;
+  right: 25px;
+}

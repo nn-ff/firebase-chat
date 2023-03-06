@@ -1,30 +1,32 @@
-import { Avatar, Button } from 'antd'
+import { Button } from 'antd'
 import { getAuth, signOut } from 'firebase/auth'
 import React, { FC, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAppDispatch } from '../../hooks/useAppDispatch'
 import { removeUser } from '../../store/slices/userSlice'
-import { UserOutlined } from '@ant-design/icons'
 import { useAuthState } from 'react-firebase-hooks/auth'
-import _, { divide } from 'lodash'
+import _ from 'lodash'
 import {
   addDoc,
   collection,
   DocumentData,
   getDocs,
   limit,
-  limitToLast,
   onSnapshot,
   orderBy,
   query,
   QueryDocumentSnapshot,
   serverTimestamp,
   startAfter,
+  startAt,
 } from 'firebase/firestore'
+
 import { db } from '../../firebase'
 import dayjs from 'dayjs'
 import TextArea from 'antd/es/input/TextArea'
 import { useInView } from 'react-intersection-observer'
+import Message from './Message'
+import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react'
 
 export const Chat: FC = () => {
   const [value, setValue] = useState<string>('')
@@ -33,10 +35,12 @@ export const Chat: FC = () => {
   const [user] = useAuthState(auth)
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
+  const [visible, setVisible] = useState<boolean>(false)
   const chatRef = useRef<HTMLDivElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
-  const { ref, inView, entry } = useInView({
+  const inputRef = useRef<HTMLButtonElement>(null)
+  const { ref, inView } = useInView({
     threshold: 0.5,
   })
   const onChangeHandler = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -111,12 +115,16 @@ export const Chat: FC = () => {
         querySnapshot.forEach((doc) => {
           dataitem.push(doc.data())
         })
-        setLatest(querySnapshot.docs[querySnapshot.docs.length - 1])
+        setLatest((prevstate) =>
+          prevstate ? prevstate : querySnapshot.docs[querySnapshot.docs.length - 1],
+        )
         setItems((prevState) => {
           return _.unionBy([...prevState], [...dataitem].reverse(), 'timestamp.seconds')
         })
       } else {
-        setLatest(querySnapshot.docs[querySnapshot.docs.length - 1])
+        setLatest((prevstate) =>
+          prevstate ? prevstate : querySnapshot.docs[querySnapshot.docs.length - 1],
+        )
       }
     })
     return () => unsub()
@@ -128,6 +136,13 @@ export const Chat: FC = () => {
       chatRef?.current?.scrollIntoView()
     }
   }, [items])
+  const onEmojiClick = (emojiData: EmojiClickData) => {
+    console.log(emojiData.emoji)
+    setValue((prevstate) => prevstate + emojiData.emoji)
+    setVisible(false)
+    inputRef?.current?.focus()
+  }
+
   return (
     <div className='chat-window'>
       <Button onClick={onClickLogout} style={{ position: 'absolute', right: 0 }}>
@@ -139,28 +154,19 @@ export const Chat: FC = () => {
         <Button ref={ref} onClick={onClickLoadMore}>
           Load more
         </Button>
-        {items?.map((obj, index) => {
+        {items?.map((obj, index, arr) => {
           const messageTime = dayjs(obj?.timestamp?.toDate() || new Date()).format('HH:mm')
-          const indexconverter = items[index - 1]?.uid ? items[index - 1].uid : 'false'
+          const indexUser = items[index - 1]?.uid ? items[index - 1].uid : 'false'
           return (
-            <div key={obj.timestamp} style={{ display: 'flex' }} className='chat-window__msg'>
-              {index === 20 ? <div ref={scrollRef}></div> : null}
-              {indexconverter === items[index].uid ? null : (
-                <div className='chat-msg__info'>
-                  <Avatar
-                    style={{ marginTop: 5 }}
-                    size={33}
-                    src={obj.photoURL}
-                    icon={<UserOutlined />}
-                  />
-                  <div>
-                    <div style={{ padding: 2, marginLeft: 10 }}>{obj.displayName}</div>
-                    <span style={{ color: 'gray', padding: 2, marginLeft: 10 }}>{messageTime}</span>
-                  </div>
-                </div>
-              )}
-              <div style={{ marginTop: 5, whiteSpace: 'pre-line' }}>{obj.text}</div>
-            </div>
+            <Message
+              key={obj.timestamp}
+              Time={messageTime}
+              indexUser={indexUser}
+              index={index}
+              items={arr}
+              obj={obj}
+              scrollRef={scrollRef}
+            />
           )
         })}
         <div ref={chatRef}></div>
@@ -179,14 +185,24 @@ export const Chat: FC = () => {
             autoSize={{ minRows: 1, maxRows: 5 }}
             onResize={() => chatRef?.current?.scrollIntoView()}
             onKeyDown={EnterSubmitHandler}
+            ref={inputRef}
           />
-          <button type='submit' className='chat-form__icon'>
-            <img
-              style={{ width: 20, height: 20 }}
-              src='https://cdn-icons-png.flaticon.com/512/2343/2343641.png'
-              alt=''
+          <img
+            src='https://upload.wikimedia.org/wikipedia/commons/thumb/9/90/Twemoji_1f600.svg/1200px-Twemoji_1f600.svg.png'
+            onClick={() => setVisible(!visible)}
+            style={{ position: 'absolute', right: '10px', top: '5px', width: 23, height: 23 }}
+          ></img>
+          {visible && (
+            <EmojiPicker
+              emojiVersion='2.0'
+              skinTonesDisabled={true}
+              onEmojiClick={onEmojiClick}
+              lazyLoadEmojis={true}
+              theme={Theme.DARK}
+              height={400}
+              width='50%'
             />
-          </button>
+          )}
         </form>
       </div>
     </div>
